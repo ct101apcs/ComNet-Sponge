@@ -1,4 +1,4 @@
-For build prereqs, see [the VM setup instructions](http://tomahawk.postech.ac.kr/cs353/assignments/vm/virtualbox).
+For build prereqs, see [the VM setup instructions](http://tomahawk.postech.ac.kr/csed353/assignments/vm/virtualbox).
 
 ## Sponge quickstart
 
@@ -18,7 +18,7 @@ You can use the `-j` switch to build in parallel, e.g.,
 
     $ make -j$(nproc)
 
-To test (after building; make sure you've got the [build prereqs](http://tomahawk.postech.ac.kr/cs353/assignments/vm/virtualbox) installed!)
+To test (after building; make sure you've got the [build prereqs](http://tomahawk.postech.ac.kr/csed353/assignments/vm/virtualbox) installed!)
 
     $ make check_labN *(replacing N with a checkpoint number)*
 
