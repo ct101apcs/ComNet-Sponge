@@ -1,0 +1,29 @@
+Start testing: Feb 20 14:29 +07
+----------------------------------------------------------
+31/169 Testing: t_webget
+31/169 Test: t_webget
+Command: "/home/pc/ComNet-Sponge/tests/webget_t.sh"
+Directory: /home/pc/ComNet-Sponge/build
+"t_webget" start time: Feb 20 14:29 +07
+Output:
+----------------------------------------------------------
+Function called: get_URL(tomahawk.postech.ac.kr, /hasher/xyzzy).
+Warning: get_URL() has not been implemented yet.
+HTTP/1.1 200 OK
+Server: nginx
+Date: Thu, 20 Feb 2025 07:29:19 GMT
+Content-Type: text/html; charset=utf-8
+Content-Length: 64
+Connection: close
+X-Robots-Tag: noindex
+
+184858a00fd7971f810848266ebcecee5e8b69972c5ffaed622f5ee078671aed
+<end of output>
+Test time =   0.05 sec
+----------------------------------------------------------
+Test Passed.
+"t_webget" end time: Feb 20 14:29 +07
+"t_webget" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Feb 20 14:29 +07
