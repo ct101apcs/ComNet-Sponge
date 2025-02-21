@@ -17,9 +17,16 @@ void get_URL(const string &host, const string &path) {
 
     socket.write(request);
 
+    // while (!socket.eof()) {
+    //     cout << socket.read();
+    // }
+
+    string response; // prevent wrong loop terminating
     while (!socket.eof()) {
-        cout << socket.read();
+       response += socket.read();
     }
+    cout << response;
+
 
     // You will need to connect to the "http" service on
     // the computer whose name is in the "host" string,
