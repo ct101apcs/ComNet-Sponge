@@ -57,15 +57,16 @@ void ByteStream::pop_output(const size_t len) {
 //! \returns a string
 std::string ByteStream::read(const size_t len) {
     string read_string = peek_output(len);
-    size_t count = 0;
-    size_t actual_bytes_popped = min(len, buffer.size());
-    while (count < actual_bytes_popped)
-    {
-        read_string+=buffer.front();
-        buffer.pop();
-        count++;
-    }
-    _bytes_read += actual_bytes_popped;
+    // size_t count = 0;
+    // size_t actual_bytes_popped = min(len, buffer.size());
+    // while (count < actual_bytes_popped)
+    // {
+    //     read_string+=buffer.front();
+    //     buffer.pop();
+    //     count++;
+    // }
+    // _bytes_read += actual_bytes_popped;
+    pop_output(read_string.size());
     return read_string;
 }
 
