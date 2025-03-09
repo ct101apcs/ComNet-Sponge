@@ -4,9 +4,9 @@
 #include "byte_stream.hh"
 #include "stream_reassembler.hh"
 #include <map>
-#include <algorithm>
 #include <string>
 #include <cstdint>
+#include <limits>
 
 // //! \brief A class that assembles a series of excerpts from a byte stream (possibly out of order,
 // //! possibly overlapping) into an in-order byte stream.
@@ -50,58 +50,32 @@
 //     bool empty() const;
 // };
 
-// class StreamReassembler {
-//   private:
-//     ByteStream _output;                             // The reassembled in-order byte stream
-//     size_t _capacity;                               // The maximum number of bytes (capacity)
-//     std::map<uint64_t, std::string> _unassembled;   // Unassembled segments: index -> substring
-//     uint64_t _first_unassembled = 0;                // Index of the next byte to be written to output
-//     bool _eof_received = false;                     // Signaled or not
-//     uint64_t _eof_index = 0;                        // Index of EOF if signaled
-
-//   public:
-//     StreamReassembler(const size_t capacity)
-//         : _output(capacity), _capacity(capacity), _unassembled(), _first_unassembled(0), _eof_received(false), _eof_index(0) {}
-
-//     void push_substring(const std::string &data, const uint64_t index, const bool eof);
-
-//     size_t unassembled_bytes() const;
-
-//     bool empty() const;
-
-//     const ByteStream &stream_out() const { return _output; }
-//     ByteStream &stream_out() { return _output; }
-// };
-
 class StreamReassembler {
 private:
-    ByteStream _output;                 // The reassembled ByteStream
-    size_t _capacity;                   // The maximum memory usage allowed
-    size_t _next_index;                 // The index of the next byte to be written to the output
-    std::map<size_t, std::string> _unassembled_segments;  // Map of index -> segment for unassembled data
-    bool _eof_received;                 // Flag to track if we've received the EOF
-    size_t _eof_index;                  // The index after the last byte in the stream
+    ByteStream _output;                                     // The reassembled ByteStream
+    size_t _capacity;                                       // The maximum memory usage allowed
+    size_t _first_unassembled;                              // The index of the next byte to be written to the output
+    std::map<size_t, std::string> _unassembled_segments;    // Map of index -> segment for unassembled data
+    size_t _eof_index;                                      // The index after the last byte in the stream
 
-    // Helper method to merge overlapping segments
-    void merge_overlapping_segments();
+    void insert_segment(const std::string &data, const size_t index);
 
-    // Helper method to write contiguous data to the output
-    void write_to_output();
-
+    void try_assemble();
+    
+    std::string truncate_data(const std::string &data, const size_t index);
+    
 public:
     StreamReassembler(const size_t capacity)
-    : _output(capacity), _capacity(capacity), _next_index(0), _unassembled_segments(), _eof_received(false), _eof_index(0) {}
+    : _output(capacity), _capacity(capacity), _first_unassembled(0), _unassembled_segments(), _eof_index(std::numeric_limits<size_t>::max()) {}
 
-    // Receive a substring and write any newly contiguous bytes into the stream
     void push_substring(const std::string &data, const size_t index, const bool eof);
 
-    // Access the reassembled ByteStream
-    ByteStream &stream_out();
+    ByteStream &stream_out(){
+        return _output;
+    }
 
-    // The number of bytes in the substrings stored but not yet reassembled
     size_t unassembled_bytes() const;
 
-    // Is the internal state empty (other than the output stream)?
     bool empty() const;
 };
 
