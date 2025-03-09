@@ -50,6 +50,9 @@
 //     bool empty() const;
 // };
 
+// ------------Reference--------------:
+// The 'push_substring() function is based on the structure of CS144 course material.
+
 class StreamReassembler {
 private:
     ByteStream _output;                                     // The reassembled ByteStream
