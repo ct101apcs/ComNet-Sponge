@@ -77,7 +77,15 @@ public:
         return _output;
     }
 
+    const ByteStream &stream_out() const{
+        return _output;
+    }
+
     size_t unassembled_bytes() const;
+
+    size_t first_unassembled() const{
+        return _first_unassembled;
+    }
 
     bool empty() const;
 };
