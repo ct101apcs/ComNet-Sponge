@@ -32,12 +32,37 @@ class TCPSender {
     //! the (absolute) sequence number for the next byte to be sent
     uint64_t _next_seqno{0};
 
-  public:
-    //! Initialize a TCPSender
-    TCPSender(const size_t capacity = TCPConfig::DEFAULT_CAPACITY,
-              const uint16_t retx_timeout = TCPConfig::TIMEOUT_DFLT,
-              const std::optional<WrappingInt32> fixed_isn = {});
+    // Abs seqno of the last byte sent
+    uint64_t _abs_ackno{0};
 
+    // Advertised window size
+    uint64_t _window_size{1};
+
+    // Outstanding segments
+    std::queue<std::pair<uint64_t, TCPSegment>> _outstanding_segments;
+
+    // Total bytes in flight
+    size_t _bytes_in_flight{0};
+
+    // Timer state
+    bool _timer_running{false};
+
+    // Total elapsed time
+    size_t _elapsed_time{0};
+
+    // Time expired
+    size_t _time_expired{0};
+
+    // Retransmission timeout
+    uint16_t _retransmission_timeout{TCPConfig::TIMEOUT_DFLT};
+
+    // Number of consecutive retransmissions
+    unsigned int _consecutive_retransmissions{0};
+
+  public:
+  TCPSender(const size_t capacity, const uint16_t retx_timeout,
+             const std::optional<WrappingInt32> fixed_isn = std::nullopt);
+             
     //! \name "Input" interface for the writer
     //!@{
     ByteStream &stream_in() { return _stream; }
