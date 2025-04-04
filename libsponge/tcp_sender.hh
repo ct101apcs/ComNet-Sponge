@@ -9,6 +9,21 @@
 #include <functional>
 #include <queue>
 
+class Timer {
+  public:
+    void start(unsigned int timeout);
+    void update(unsigned int time_elapsed);
+    void reset();
+    bool active() const { return _active; }
+    bool expired() const { return _active && _expired; }
+
+  private:
+    bool _active{false};
+    bool _expired{false};
+    unsigned int _current_time{0};
+    unsigned int _timeout{0};
+};
+
 //! \brief The "sender" part of a TCP implementation.
 
 //! Accepts a ByteStream, divides it up into segments and sends the
@@ -29,6 +44,9 @@ class TCPSender {
     //! outgoing stream of bytes that have not yet been sent
     ByteStream _stream;
 
+    // Timer state
+    Timer _timer;
+    
     //! the (absolute) sequence number for the next byte to be sent
     uint64_t _next_seqno{0};
 
@@ -43,9 +61,6 @@ class TCPSender {
 
     // Total bytes in flight
     size_t _bytes_in_flight{0};
-
-    // Timer state
-    bool _timer_running{false};
 
     // Total elapsed time
     size_t _elapsed_time{0};
@@ -62,7 +77,7 @@ class TCPSender {
   public:
   TCPSender(const size_t capacity, const uint16_t retx_timeout,
              const std::optional<WrappingInt32> fixed_isn = std::nullopt);
-             
+
     //! \name "Input" interface for the writer
     //!@{
     ByteStream &stream_in() { return _stream; }
