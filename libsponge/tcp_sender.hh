@@ -69,7 +69,7 @@ class TCPSender {
     size_t _time_expired{0};
 
     // Retransmission timeout
-    uint16_t _retransmission_timeout{TCPConfig::TIMEOUT_DFLT};
+    size_t _retransmission_timeout{TCPConfig::TIMEOUT_DFLT};
 
     // Number of consecutive retransmissions
     unsigned int _consecutive_retransmissions{0};

@@ -21,6 +21,18 @@ class TCPConnection {
     //! in case the remote TCPConnection doesn't know we've received its whole stream?
     bool _linger_after_streams_finish{true};
 
+    size_t _time_last_recv{0};
+
+    bool _active{true};
+
+    void _kill_connection(const bool clean = true);
+
+    void _send_rst_empty_segment();
+
+    void _clear_sender_buffer();
+
+    bool _kill_condition_check() const;
+
   public:
     //! \name "Input" interface for the writer
     //!@{
