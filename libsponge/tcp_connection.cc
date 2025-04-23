@@ -37,7 +37,7 @@ void TCPConnection::_kill_connection(bool clean) {
 }
 
 void TCPConnection::_send_rst_empty_segment(){
-    _sender.send_empty_segment();
+    _sender.send_empty_segment(false, false, true);
     _clear_sender_buffer();
 }
 
@@ -56,9 +56,14 @@ void TCPConnection::_clear_sender_buffer() {
             header.win = _receiver.window_size();
         }
 
-        header.seqno = _sender.next_seqno();
-        header.ackno = _receiver.ackno().value_or(WrappingInt32{0});
-        header.ack = true;
+        // header.seqno = _sender.next_seqno();
+        // header.ackno = _receiver.ackno().value_or(WrappingInt32{0});
+        // header.ack = true;
+
+        if (_receiver.ackno().has_value()) {
+            header.ackno = _receiver.ackno().value();
+            header.ack = true;
+        }
 
         _segments_out.push(seg);
         queue.pop();
@@ -66,11 +71,13 @@ void TCPConnection::_clear_sender_buffer() {
 }
 
 bool TCPConnection::_kill_condition_check() const {
-    return _linger_after_streams_finish 
-            && _receiver.stream_out().input_ended() 
-            && _receiver.unassembled_bytes() == 0
-            && _sender.stream_in().input_ended()
-            && _sender.bytes_in_flight() == 0;
+    return 
+        // _linger_after_streams_finish &&
+        _receiver.stream_out().input_ended() &&
+        _receiver.unassembled_bytes() == 0 &&
+        _sender.stream_in().input_ended() &&
+        _sender.bytes_in_flight() == 0 &&
+        (_sender.next_seqno_absolute() == _sender.stream_in().bytes_written() + 2);
 }
 
 void TCPConnection::segment_received(const TCPSegment &seg) {
@@ -86,7 +93,7 @@ void TCPConnection::segment_received(const TCPSegment &seg) {
     _receiver.segment_received(seg);
 
     if (header.ack) {
-        _sender.ack_received(header.seqno, header.win);
+        _sender.ack_received(header.ackno, header.win);
     }
 
     // if the incoming segment occupied any sequence numbers, the TCPConnection makes sure that 
@@ -107,13 +114,8 @@ void TCPConnection::segment_received(const TCPSegment &seg) {
 
     _clear_sender_buffer();
 
-    if (_receiver.stream_out().input_ended() && _sender.stream_in().input_ended()) {
-        if (_linger_after_streams_finish) {
-            _linger_after_streams_finish = false;
-            _time_last_recv = 0;
-        } else {
-            _kill_connection(true);
-        }
+    if (_receiver.stream_out().input_ended() && !_sender.stream_in().input_ended()) {
+        _linger_after_streams_finish = false;
     }
 }
 
@@ -132,7 +134,7 @@ size_t TCPConnection::write(const string &data) {
 void TCPConnection::tick(const size_t ms_since_last_tick) {
     _time_last_recv += ms_since_last_tick;
 
-    if (_sender.consecutive_retransmissions() > _cfg.MAX_RETX_ATTEMPTS) {
+    if (_sender.consecutive_retransmissions() >= _cfg.MAX_RETX_ATTEMPTS) {
         _send_rst_empty_segment();
         _kill_connection(false);
         return;
@@ -162,12 +164,12 @@ void TCPConnection::end_input_stream() {
     _sender.fill_window();
     _clear_sender_buffer();
 
-    if (_linger_after_streams_finish) {
-        _linger_after_streams_finish = false;
-        _time_last_recv = 0;
-    } else {
-        _kill_connection(true);
-    }
+    // if (_linger_after_streams_finish) {
+    //     _linger_after_streams_finish = false;
+    //     _time_last_recv = 0;
+    // } else {
+    //     _kill_connection(true);
+    // }
 }
 
 void TCPConnection::connect() {

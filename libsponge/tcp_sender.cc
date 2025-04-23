@@ -1,5 +1,4 @@
 #include "tcp_sender.hh"
-
 #include "tcp_config.hh"
 
 #include <random>
@@ -190,4 +189,15 @@ void TCPSender::send_empty_segment() {
     TCPSegment seg;
     seg.header().seqno = wrap(_next_seqno, _isn);
     _segments_out.push(seg);
+}
+
+void TCPSender::send_empty_segment(bool syn, bool fin, bool rst) {
+    TCPSegment seg;
+    seg.header().seqno = wrap(_next_seqno, _isn);
+    seg.header().syn = syn;
+    seg.header().fin = fin;
+    seg.header().rst = rst;
+    _segments_out.push(seg);
+    _outstanding_segments.push({_next_seqno, seg});
+    _next_seqno += seg.length_in_sequence_space();
 }
