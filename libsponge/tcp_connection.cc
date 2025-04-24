@@ -47,18 +47,13 @@ void TCPConnection::_clear_sender_buffer() {
         TCPSegment &seg = queue.front();
         TCPHeader &header = seg.header();
 
-        // size_t max_size = numeric_limits<size_t>::max();
         uint16_t max_size = numeric_limits<uint16_t>::max();
 
         if (_receiver.window_size() > max_size) {
             header.win = max_size;
         } else {
-            header.win = _receiver.window_size();
+            header.win = static_cast<uint16_t>(_receiver.window_size());
         }
-
-        // header.seqno = _sender.next_seqno();
-        // header.ackno = _receiver.ackno().value_or(WrappingInt32{0});
-        // header.ack = true;
 
         if (_receiver.ackno().has_value()) {
             header.ackno = _receiver.ackno().value();
@@ -72,12 +67,11 @@ void TCPConnection::_clear_sender_buffer() {
 
 bool TCPConnection::_kill_condition_check() const {
     return 
-        // _linger_after_streams_finish &&
-        _receiver.stream_out().input_ended() &&
-        _receiver.unassembled_bytes() == 0 &&
-        _sender.stream_in().input_ended() &&
-        _sender.bytes_in_flight() == 0 &&
-        (_sender.next_seqno_absolute() == _sender.stream_in().bytes_written() + 2);
+        _receiver.stream_out().input_ended() && // Receiver has received all data
+        _receiver.unassembled_bytes() == 0 &&  // No unassembled bytes left
+        _sender.stream_in().input_ended() &&   // Sender has finished input
+        _sender.bytes_in_flight() == 0 &&      // No bytes in flight
+        (_sender.next_seqno_absolute() == _sender.stream_in().bytes_written() + (_sender.stream_in().eof() ? 2 : 0)); // FIN and ACK sent if EOF
 }
 
 void TCPConnection::segment_received(const TCPSegment &seg) {
@@ -94,11 +88,13 @@ void TCPConnection::segment_received(const TCPSegment &seg) {
 
     if (header.ack) {
         _sender.ack_received(header.ackno, header.win);
+    } else{
+        _sender.ack_received(_receiver.ackno().value(), header.win);
     }
 
-    // if the incoming segment occupied any sequence numbers, the TCPConnection makes sure that 
-    // at least one segment is sent in reply, to reflect an update in the ackno and window size
-    if (_sender.segments_out().size() == 0 && seg.length_in_sequence_space() > 0) {
+    if (
+        _sender.segments_out().size() == 0 && 
+        seg.length_in_sequence_space() > 0) {
         _sender.fill_window();
 
         if (_sender.segments_out().size() == 0) {
@@ -134,29 +130,28 @@ size_t TCPConnection::write(const string &data) {
 void TCPConnection::tick(const size_t ms_since_last_tick) {
     _time_last_recv += ms_since_last_tick;
 
+    // Check if retransmission attempts exceed the maximum allowed
     if (_sender.consecutive_retransmissions() >= _cfg.MAX_RETX_ATTEMPTS) {
-        _send_rst_empty_segment();
-        _kill_connection(false);
+        _send_rst_empty_segment(); // Send a RST segment
+        _kill_connection(false);   // Kill the connection uncleanly
         return;
     }
 
-    _sender.tick(ms_since_last_tick);
+    _sender.tick(ms_since_last_tick); // Update sender state with the elapsed time
 
-    if (_kill_condition_check()){
+    // Check if the connection should be killed based on the FIN flag and other conditions
+    if (_kill_condition_check()) {
         if (_linger_after_streams_finish) {
+            // If lingering, check if the linger timeout has expired
             if (_time_last_recv >= 10 * _cfg.rt_timeout) {
-                _kill_connection(true);
+                _kill_connection(true); // Cleanly kill the connection
             }
         } else {
-            _kill_connection(true);
+            _kill_connection(true); // Cleanly kill the connection immediately
         }
     }
 
-    // if (_sender.segments_out().size() > 0) {
-    //     _clear_sender_buffer();
-    // }
-
-    _clear_sender_buffer();
+    _clear_sender_buffer(); // Ensure sender's outgoing segments are processed
 }
 
 void TCPConnection::end_input_stream() {
@@ -164,15 +159,13 @@ void TCPConnection::end_input_stream() {
     _sender.fill_window();
     _clear_sender_buffer();
 
-    // if (_linger_after_streams_finish) {
-    //     _linger_after_streams_finish = false;
-    //     _time_last_recv = 0;
-    // } else {
-    //     _kill_connection(true);
-    // }
+    if (_receiver.stream_out().input_ended() && _sender.stream_in().eof()) {
+        _linger_after_streams_finish = false;
+    }
 }
 
 void TCPConnection::connect() {
+    
     _sender.fill_window();
     _clear_sender_buffer();
 }
@@ -183,9 +176,14 @@ TCPConnection::~TCPConnection() {
             cerr << "Warning: Unclean shutdown of TCPConnection\n";
 
             // Your code here: need to send a RST segment to the peer
+            // _kill_connection(true);
+            // _send_rst_empty_segment();
+            // _clear_sender_buffer();
+
+            _sender.stream_in().set_error();
+            _receiver.stream_out().set_error();
             _send_rst_empty_segment();
-            _kill_connection(false);
-            _clear_sender_buffer();
+            _active = false;
         }
     } catch (const exception &e) {
         std::cerr << "Exception destructing TCP FSM: " << e.what() << std::endl;

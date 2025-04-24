@@ -25,7 +25,7 @@ class TCPConnection {
 
     bool _active{true};
 
-    void _kill_connection(const bool clean = true);
+    void _kill_connection(bool clean = true);
 
     void _send_rst_empty_segment();
 
