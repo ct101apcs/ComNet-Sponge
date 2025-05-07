@@ -45,7 +45,7 @@ void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Addres
         // If the IP address is not in the ARP cache, send an ARP request
         auto it_timeout = _arp_request_timeouts.find(next_hop_ip);
         if (it_timeout == _arp_request_timeouts.end()
-            || _current_time - it_timeout->second > 6000) {
+            || _current_time - it_timeout->second > 5000) {
             // If no pending request, create a new one
             // _arp_request_timeouts[next_hop_ip] = _current_time;
             ARPMessage arp_request;
@@ -63,7 +63,7 @@ void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Addres
             }
         }
         // Store the datagram in the pending queue
-        _pending_datagrams.emplace_back(next_hop_ip, dgram);
+        _pending_datagrams.emplace_back(make_pair(next_hop_ip, dgram));
     }
 }
 
@@ -129,12 +129,12 @@ optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &fra
 //! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method
 void NetworkInterface::tick(const size_t ms_since_last_tick) {
     _current_time += ms_since_last_tick;
-    _remove_expired_requests();
+    _remove_expired_cache();
 }
 
-void NetworkInterface::_remove_expired_requests() {
+void NetworkInterface::_remove_expired_cache() {
     for (auto it = _arp_cache.begin(); it != _arp_cache.end();) {
-        if (_current_time - it->second.second > 6000) {
+        if (_current_time - it->second.second > 30000) {
             it = _arp_cache.erase(it);
         } else {
             ++it;
@@ -143,8 +143,7 @@ void NetworkInterface::_remove_expired_requests() {
 }
 
 void NetworkInterface::_send_pending_datagrams(uint32_t ip_address) {
-    auto it = _pending_datagrams.begin();
-    while (it != _pending_datagrams.end()) {
+    for (auto it = _pending_datagrams.begin();it != _pending_datagrams.end();){
         if (it->first == ip_address) {
             const auto &ethernet_address = _arp_cache[ip_address].first;
             const auto &payload = it->second.serialize();

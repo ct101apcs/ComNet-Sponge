@@ -42,16 +42,16 @@ class NetworkInterface {
     std::queue<EthernetFrame> _frames_out{};
 
     // IPAddress to EthernetAddress mapping cache
-    std::map<uint32_t, std::pair<EthernetAddress, size_t>> _arp_cache;
+    std::map<uint32_t, std::pair<EthernetAddress, size_t>> _arp_cache{};
 
-    std::deque<std::pair<uint32_t, InternetDatagram>> _pending_datagrams;
+    std::deque<std::pair<uint32_t, InternetDatagram>> _pending_datagrams{};
 
-    std::map<uint32_t, size_t> _arp_request_timeouts;
+    std::map<uint32_t, size_t> _arp_request_timeouts{};
 
-    size_t _current_time = 0;
+    size_t _current_time{0};
 
     // Remove expired ARP requests
-    void _remove_expired_requests();
+    void _remove_expired_cache();
 
     // Send datagrams in pending queue if a new IP to Ethernet mapping is found
     void _send_pending_datagrams(uint32_t ip_address);
