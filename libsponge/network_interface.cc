@@ -91,12 +91,12 @@ optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &fra
                 const auto &sender_ethernet = arp_message.sender_ethernet_address;
 
                 auto it = _arp_cache.find(sender_ip);
-                if (it == _arp_cache.end()) {
-                    // If the sender IP is not in the ARP cache, add it
-                    it->second.first = sender_ethernet;
+                if (it != _arp_cache.end()) {
+                    // Update existing entry
+                    it->second.first  = sender_ethernet;
                     it->second.second = _current_time;
                 } else {
-                    // If the sender IP is already in the ARP cache, update the timestamp
+                    // Insert brand-new mapping
                     _arp_cache.emplace(sender_ip, make_pair(sender_ethernet, _current_time));
                 }
 
